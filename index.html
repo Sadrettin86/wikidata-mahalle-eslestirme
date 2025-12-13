@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wikidata Mahalle Eşleştirme</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            max-width: 1600px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+        
+        /* Sol Panel */
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tree {
+            list-style: none;
+        }
+        
+        .tree-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .tree-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .tree-label:hover {
+            background: #f7fafc;
+        }
+        
+        .tree-label.active {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .tree-icon {
+            font-size: 0.8rem;
+            width: 16px;
+        }
+        
+        .tree-count {
+            margin-left: auto;
+            font-size: 0.75rem;
+            background: #e2e8f0;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+        }
+        
+        .tree-label.active .tree-count {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .tree-children {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Sağ Panel */
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .content-title {
+            font-size: 1.3rem;
+            color: #2d3748;
+        }
+        
+        .content-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .mahalle-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .mahalle-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: all 0.3s;
+        }
+        
+        .mahalle-card:hover {
+            border-color: #cbd5e0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .mahalle-card.matched {
+            background: #f0fff4;
+            border-color: #48bb78;
+        }
+        
+        .mahalle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+        
+        .mahalle-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .mahalle-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+        
+        .mahalle-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #edf2f7;
+            color: #4a5568;
+        }
+        
+        .suggestions {
+            margin-top: 1rem;
+        }
+        
+        .suggestions-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .suggestion-item {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .suggestion-item:hover {
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+        
+        .suggestion-item.high-confidence {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+        
+        .suggestion-item.medium-confidence {
+            border-color: #ecc94b;
+            background: #fffff0;
+        }
+        
+        .suggestion-item.low-confidence {
+            border-color: #fc8181;
+            background: #fff5f5;
+        }
+        
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .suggestion-qid {
+            font-family: monospace;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 0.9rem;
+        }
+        
+        .confidence-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .confidence-high {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .confidence-medium {
+            background: #ecc94b;
+            color: #744210;
+        }
+        
+        .confidence-low {
+            background: #fc8181;
+            color: white;
+        }
+        
+        .suggestion-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+        
+        .suggestion-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: #4a5568;
+        }
+        
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .meta-icon {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .meta-label {
+            font-weight: 600;
+            min-width: 40px;
+        }
+        
+        .meta-value {
+            color: #2d3748;
+        }
+        
+        .meta-value a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .meta-value a:hover {
+            text-decoration: underline;
+        }
+        
+        .suggestion-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .btn-match {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-match:hover {
+            background: #38a169;
+            transform: scale(1.02);
+        }
+        
+        .btn-view {
+            padding: 0.6rem 1rem;
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-view:hover {
+            background: #cbd5e0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #a0aec0;
+        }
+        
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-suggestions {
+            text-align: center;
+            padding: 2rem;
+            color: #a0aec0;
+            font-style: italic;
+        }
+        
+        .matched-info {
+            background: #c6f6d5;
+            border: 2px solid #48bb78;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .matched-text {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            color: #22543d;
+        }
+        
+        .matched-link {
+            color: #276749;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .matched-link:hover {
+            text-decoration: underline;
+        }
+        
+        .btn-undo {
+            padding: 0.4rem 0.8rem;
+            background: white;
+            color: #48bb78;
+            border: 2px solid #48bb78;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-undo:hover {
+            background: #48bb78;
+            color: white;
+        }
+        
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗺️ Wikidata Mahalle Eşleştirme</h1>
+        <p style="opacity: 0.9; margin-top: 0.5rem;">Türkiye'deki mahalleleri Wikidata ile eşleştirin</p>
+        <div class="stats">
+            <div class="stat-item">
+                <span>📊 Toplam:</span>
+                <span class="stat-value" id="totalCount">-</span>
+            </div>
+            <div class="stat-item">
+                <span>✅ Eşleşti:</span>
+                <span class="stat-value" id="matchedCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>⏳ Kalan:</span>
+                <span class="stat-value" id="remainingCount">-</span>
+            </div>
+            <div class="stat-item">
+                <span>📈 İlerleme:</span>
+                <span class="stat-value" id="progressPercent">0%</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <aside class="sidebar">
+            <h3>İller & İlçeler</h3>
+            <div id="treeView">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Yükleniyor...
+                </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                <button class="btn btn-secondary" style="width: 100%;" onclick="exportData()">
+                    💾 Export JSON
+                </button>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <div class="content-header">
+                <div>
+                    <div class="content-title" id="contentTitle">Mahalleler</div>
+                    <div style="font-size: 0.85rem; color: #718096; margin-top: 0.25rem;" id="contentSubtitle">
+                        Bir il ve ilçe seçin
+                    </div>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-secondary" onclick="showFilters()">
+                        ⚙️ Filtrele
+                    </button>
+                    <button class="btn btn-primary" id="nextDistrictBtn" onclick="nextDistrict()" disabled>
+                        ⏭️ Sonraki İlçe
+                    </button>
+                </div>
+            </div>
+            
+            <div id="mahalleList">
+                <div class="loading">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🗺️</div>
+                    <div>Sol taraftan bir il ve ilçe seçin</div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="app-v2.js"></script>
+</body>
+</html>
