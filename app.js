@@ -315,11 +315,26 @@ function createSuggestionItem(suggestion, mahalle) {
 }
 
 // Wikidata'da ara
+// Wikidata'da ara
 async function searchWikidata(mahalle) {
     try {
-        // Mahalle adını temizle
-        const mahalleName = mahalle.mahalle.replace(' Mah.', '').replace(' Mahallesi', '');
-        const searchQuery = `${mahalleName}, ${mahalle.ilce}`;
+        // Mahalle adını temizle - tüm gereksiz ekleri kaldır
+        const mahalleName = mahalle.mahalle
+            .replace(' Mah.', '')
+            .replace(' Mahallesi', '')
+            .replace(' Köyü', '')
+            .replace(' Köy', '')
+            .replace(' Bel.', '')
+            .replace(' Belediyesi', '')
+            .replace(' Kasabası', '')
+            .trim();
+        
+        // İlçe adı "Merkez" ise il adını kullan
+        const searchLocation = mahalle.ilce === 'Merkez' ? mahalle.il : mahalle.ilce;
+        
+        const searchQuery = `${mahalleName}, ${searchLocation}`;
+        
+        console.log(`🔍 Wikidata araması: "${searchQuery}" (Orijinal: "${mahalle.mahalle}, ${mahalle.ilce}")`);
         
         // Wikidata API'de ara
         const response = await fetch(
@@ -335,8 +350,11 @@ async function searchWikidata(mahalle) {
         const data = await response.json();
         
         if (!data.search || data.search.length === 0) {
+            console.log(`❌ "${searchQuery}" için sonuç bulunamadı`);
             return [];
         }
+        
+        console.log(`✅ "${searchQuery}" için ${data.search.length} sonuç bulundu`);
         
         // Her öneri için detaylı bilgi al
         const suggestions = [];
@@ -353,7 +371,7 @@ async function searchWikidata(mahalle) {
         return suggestions;
         
     } catch (error) {
-        console.error('Wikidata arama hatası:', error);
+        console.error('❌ Wikidata arama hatası:', error);
         return [];
     }
 }
